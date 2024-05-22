@@ -1,34 +1,41 @@
 import asyncio
-import websockets
-from graceful_exit import GracefulExit
-from asyncio import get_event_loop
+import shared
+from websockets import serve
 from websockets.server import WebSocketServerProtocol, WebSocketServer
-from socket import AF_INET
+import socket as EnumSocketFamily
+from server_handler import me_registrar
+from graceful_exit import GracefulExit
+from menu import exibirMenu
 
-def get_server_url() -> str:
-    return 'http://localhost:5000'
-def get_client_host() -> str:
-    return '0.0.0.0'
+get_client_host = lambda: 'localhost'
 
-def create_uri(server: WebSocketServer) -> str:
+def create_url(server: WebSocketServer):
     sock = server.sockets[0]
-    if sock.family == AF_INET:
-        return "ws://%s:%d" % sock.getsockname()
-    raise ValueError("IPv6 address detected. Only IPv4 addresses are allowed.")
-
-
+    url: str
+    if sock.family == EnumSocketFamily.AF_INET:
+        url = "%s:%d" % sock.getsockname()
+    elif sock.family == EnumSocketFamily.AF_INET6:
+        url = "[%s]:%d" % sock.getsockname()[:2]
+    elif sock.family == EnumSocketFamily.AF_UNIX:
+        url = sock.getsockname()
+    else:
+        url = str(sock.getsockname())
+    shared.socket_url = url
+    
 async def websocket_handler(websocket: WebSocketServerProtocol, path: str) -> None: 
     async for message in websocket:
         print(message)
 
-async def main() -> None:
-    start_server = websockets.serve(websocket_handler, get_client_host(), 0)
-    server: WebSocketServer = await start_server
-    uri = create_uri(server)
+async def start_ws_server():
+    server: WebSocketServer = await serve(websocket_handler, get_client_host(), 0)
+    create_url(server)
+    me_registrar()
+    print(f"WebSocket server running at {shared.socket_url}")
+    shared.evento_socket_iniciado.set()
     
     try:
-        print(f"WebSocket server running at {uri}")
-        await asyncio.Future()  # Run until interrupted
+
+        await asyncio.Future()
     except GracefulExit:
         print("Received exit signal, shutting down...")
     finally:
@@ -36,5 +43,12 @@ async def main() -> None:
         await server.wait_closed()
         print("WebSocket server stopped")
 
+async def main():
+    await asyncio.gather(
+        asyncio.create_task(start_ws_server()), 
+        asyncio.create_task(exibirMenu())    
+    )
+    
 if __name__ == "__main__":
     asyncio.run(main())
+    
