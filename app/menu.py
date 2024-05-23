@@ -1,16 +1,28 @@
-from server_handler import get_clientes
+import server_handler
+import shared
 from graceful_exit import GracefulExit
 from typing import Tuple
-import shared
+from validacao import validar_nome_cliente
+from asyncio import run
 
-def buscarClientes():
-  clientes = get_clientes()
+def listar_clientes():
+  clientes = server_handler.get_clientes()
+  if not len(clientes): print("Nenhum cliente disponível")
   for cliente in clientes:
     print(cliente)
 
+def solicitar_conexao():
+  while 1:
+    client_name = input("Nome do cliente que deseja conectar [0 para sair]:")
+    if client_name.isnumeric() and int(client_name) == 0: return
+    elif not validar_nome_cliente(client_name): print("Nome inválido, tente novamente.")
+    else: break
+  cliente = server_handler.obter_endereco_cliente(client_name)
+  run(solicitar_conexao(cliente))
 
 opcoes = [
-  ("Buscar clientes", buscarClientes)
+  ("Listar clientes", listar_clientes),
+  ("Solicitar conexão", solicitar_conexao)
 ]
 
 async def exibirMenu():
@@ -25,6 +37,5 @@ async def exibirMenu():
       raise GracefulExit
     if resposta.isnumeric() and int(resposta) < len(opcoes):
       opcoes[int(resposta)][1]()
-      break
     else:
       print("Opção desconhecida")
