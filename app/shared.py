@@ -1,5 +1,5 @@
-from asyncio import Event
+from Cliente import Cliente
+from Chat_Thread import Chat_Thread
 
-socket_url: str = None
-evento_socket_iniciado = Event()
-nome_cliente: str
+me: Cliente
+chat_threads = dict[str, Chat_Thread]()

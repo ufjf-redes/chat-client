@@ -1,11 +1,13 @@
-from asyncio import get_event_loop
+from asyncio import get_event_loop, all_tasks
 import signal
 
 class GracefulExit(SystemExit):
   code = 1
 
 def raise_graceful_exit(*args):
-  get_event_loop().stop()
+  for task in all_tasks():
+    task.cancel()
+  
   print("Gracefully shutdown")
   raise GracefulExit()
 
