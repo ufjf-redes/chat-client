@@ -1,53 +1,48 @@
 from enum import Enum
-from Cliente import Cliente
+from cliente import Cliente
 from threading import Thread
+from interface import Interface
 from websockets.server import WebSocketServerProtocol
-from asyncio import run
+from asyncio import run, create_task, get_event_loop
+from my_enum import StatusChat, MensagemSocket
 import subprocess
-
-class StatusChat(Enum): 
-  ATIVO = 'ATIVO'
-  AGUARDANDO_ACEITE = 'AGUARDANDO_ACEITE'
-  SOLICITACAO_PENDENTE = 'SOLICITACAO_PENDENTE'
 
 class Chat_Thread:
   cliente: Cliente
   thread: Thread
   status: StatusChat
   socket: WebSocketServerProtocol
-  processo: subprocess.Popen
+  interface: Interface
   
-  def __init__(self, cliente: Cliente, thread: Thread, status: StatusChat, socket: WebSocketServerProtocol):
+  def __init__(self, cliente: Cliente, status: StatusChat, thread: Thread = None, socket: WebSocketServerProtocol = None):
     self.cliente = cliente
     self.thread = thread
     self.status = status
     self.socket = socket
+    self.interface = None
     
-  def conectar():
+  def conectar(self):
     if self.status == StatusChat.ATIVO:
       return
-      self.status = StatusChat.ATIVO
-    if self.status == StatusChat.SOLICITACAO_PENDENTE: self.talk()
-    elif self.status == StatusChat.AGUARDANDO_ACEITE: 
-      self.thread = Thread(target = run, args = (self.talk,))
+    oldStatus = self.status
+    self.status = StatusChat.ATIVO
+    if oldStatus == StatusChat.SOLICITACAO_PENDENTE: 
+      self.thread = Thread(target = run, args = (self.enviar_aceite(),), daemon=True)
       self.thread.start()
+    elif oldStatus == StatusChat.AGUARDANDO_ACEITE: 
+      get_event_loop().create_task(self.talk())
     
-  def send_message(message: str):
-    self.processo.stdin.write(mensagem.encode('utf-8') + b'\n')
-    self.processo.stdin.flush()
+  def stop(self):
+    if self.interface is not None and self.interface.is_open():
+      self.interface.close()
     
-  async def talk():
-    if self.status != StatusChat.ATIVO:
-      return
+  async def enviar_aceite(self):
+    await self.socket.send(MensagemSocket.ACEITAR_CONEXAO.value)
+    await self.talk()
     
-    self.processo = subprocess.Popen(["py", "chat.py"], 
-      stdin=subprocess.PIPE, 
-      stdout=subprocess.PIPE, 
-      stderr=subprocess.PIPE,
-      universal_newlines=True,
-      creationflags = subprocess.CREATE_NEW_CONSOLE
-    )
-    saida, erro = subprocesso.communicate()
+  async def talk(self):
+    self.interface = Interface(self.cliente.nome)
+    self.interface.print("Você está conversando com " + self.cliente.nome)
+    async for message in self.socket:
+      self.interface.print(f"[{self.cliente.nome}]: {message}")
 
-    print("Saída do subprocesso:", saida)
-    print("Erro do subprocesso:", erro)

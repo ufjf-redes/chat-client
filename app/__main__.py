@@ -10,7 +10,7 @@ from sys import argv
 from random import choices, choice
 from string import ascii_lowercase, digits
 from conexao_socket import websocket_handler, inicializar_socket_headers
-from Cliente import Cliente
+from cliente import Cliente
 
 get_client_host = lambda: 'localhost'
 def criar_nome_cliente():
@@ -21,7 +21,7 @@ def criar_nome_cliente():
     else:
         return argv[1]
 
-def create_url(server: WebSocketServer):
+def criar_url(server: WebSocketServer):
     sock = server.sockets[0]
     if sock.family == EnumSocketFamily.AF_INET:
         return "%s:%d" % sock.getsockname()
@@ -33,8 +33,7 @@ def create_url(server: WebSocketServer):
         return str(sock.getsockname())
 
 def criar_cliente(server: WebSocketServer):
-    eu = Cliente(criar_nome_cliente(), create_url(server))
-    shared.me = eu
+    shared.me = Cliente(criar_nome_cliente(), criar_url(server))
     print(f"Seja bem vindo, {shared.me.nome}!")
 
 async def start_ws_server():

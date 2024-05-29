@@ -1,4 +1,5 @@
 from asyncio import get_event_loop, all_tasks
+import shared
 import signal
 
 class GracefulExit(SystemExit):
@@ -7,6 +8,8 @@ class GracefulExit(SystemExit):
 def raise_graceful_exit(*args):
   for task in all_tasks():
     task.cancel()
+  for chat in shared.chat_threads.values():
+    chat.stop()
   
   print("Gracefully shutdown")
   raise GracefulExit()
