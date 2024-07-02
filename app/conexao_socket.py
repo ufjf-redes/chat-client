@@ -25,6 +25,7 @@ async def websocket_handler(websocket: websockets.server.WebSocketServerProtocol
   try:
     if not nome_valido: await send_error(websocket, "Nome inválido")
     message = await websocket.recv()
+    print(f"(websocket_handler) Mensagem recebida: {message}")
     if message != MensagemSocket.SOLICITAR_CONEXAO.value: await websocket.send(json.dumps({"error": "Mensagem inválida"}))
     thread_aberta = shared.chat_threads.get(client_name)
     if thread_aberta is not None: await send_error(websocket, "Conexão já solicitada ou ativa")
@@ -35,6 +36,7 @@ async def websocket_handler(websocket: websockets.server.WebSocketServerProtocol
     StatusChat.SOLICITACAO_PENDENTE,
     socket = websocket, 
   )
+  print(f"Chat_Thread criado para {client_name}")
   await websocket.wait_closed()
 
 
