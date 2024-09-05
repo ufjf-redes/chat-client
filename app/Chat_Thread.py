@@ -1,9 +1,9 @@
 from enum import Enum
 from cliente import Cliente
-from threading import Thread
+from threading import Thread, Event
 from interface import Interface
-from websockets.server import WebSocketServerProtocol
-from asyncio import run, create_task, get_event_loop
+from websockets.sync.server import ServerConnection
+from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 from my_enum import StatusChat, MensagemSocket
 import subprocess
 
@@ -11,10 +11,11 @@ class Chat_Thread:
   cliente: Cliente
   thread: Thread
   status: StatusChat
-  socket: WebSocketServerProtocol
+  socket: ServerConnection
   interface: Interface
+  encerrado_event = Event()
   
-  def __init__(self, cliente: Cliente, status: StatusChat, thread: Thread = None, socket: WebSocketServerProtocol = None):
+  def __init__(self, cliente: Cliente, status: StatusChat, thread: Thread = None, socket: ServerConnection = None):
     self.cliente = cliente
     self.thread = thread
     self.status = status
@@ -27,22 +28,32 @@ class Chat_Thread:
     oldStatus = self.status
     self.status = StatusChat.ATIVO
     if oldStatus == StatusChat.SOLICITACAO_PENDENTE: 
-      self.thread = Thread(target = run, args = (self.enviar_aceite(),), daemon=True)
+      self.socket.send(MensagemSocket.ACEITAR_CONEXAO.value)
+      self.thread = Thread(target = self.talk, daemon=True)
       self.thread.start()
     elif oldStatus == StatusChat.AGUARDANDO_ACEITE: 
-      get_event_loop().create_task(self.talk())
-    
+      self.talk()
+      
   def stop(self):
+    self.socket.close()
+    self.status = StatusChat.ENCERRADO
+    self.encerrado_event.set()
     if self.interface is not None and self.interface.is_open():
       self.interface.close()
-    
-  async def enviar_aceite(self):
-    await self.socket.send(MensagemSocket.ACEITAR_CONEXAO.value)
-    await self.talk()
-    
-  async def talk(self):
+          
+  def send(self, message: str):
+    self.socket.send(message)
+    self.interface.print(f"[Você]: {message}\n")
+  
+  def talk(self):
     self.interface = Interface(self.cliente.nome)
-    self.interface.print("Você está conversando com " + self.cliente.nome)
-    async for message in self.socket:
-      self.interface.print(f"[{self.cliente.nome}]: {message}")
-
+    self.interface.onClose = self.stop
+    self.interface.onInput = self.send
+    self.interface.print(f"Você está conversando com {self.cliente.nome}\n\n")
+    try:
+      for message in self.socket:
+        self.interface.print(f"[{self.cliente.nome}]: {message}\n")
+    except (ConnectionClosedOK, ConnectionClosedError):
+      pass
+    finally:
+      self.stop()

@@ -1,16 +1,14 @@
 import server_handler
 import shared
-import asyncio
 from graceful_exit import GracefulExit
 from typing import Tuple
 from validacao import validar_nome_cliente
-from asyncio import create_task, iscoroutinefunction, sleep, get_event_loop, run
 from conexao_socket import solicitar_conexao_a_endereco
-from threading import Thread
 from util import input_nome_cliente
 from cliente import Cliente
 from chat_thread import Chat_Thread
 from my_enum import StatusChat
+from threading import Thread
 
 def listar_clientes():
   clientes = server_handler.get_clientes()
@@ -28,7 +26,7 @@ def solicitar_conexao():
     return
   cliente_endereco = server_handler.obter_endereco_cliente(client_name)
   cliente = Cliente(client_name, cliente_endereco)
-  thread = Thread(target = asyncio.run, args = (solicitar_conexao_a_endereco(cliente),), daemon=True)
+  thread = Thread(target = solicitar_conexao_a_endereco, args = (cliente,), daemon=True)
   shared.chat_threads[client_name] = Chat_Thread(cliente, StatusChat.AGUARDANDO_ACEITE, thread = thread)
   thread.start()
 
@@ -54,15 +52,19 @@ opcoes = [
   ("Aceitar solicitação de conexão", aceitar_solicitacao),
 ]
 
-async def exibir_menu():
+def exibir_menu():
   while 1:
-    print("\nMenu:")
+    print(f"\nMenu: [usuario: {shared.me.nome}]")
     for index, opcao in enumerate(opcoes):
       print(f"[{index}] - {opcao[0]}")
     print(f"[exit] - Sair")
-    resposta = await get_event_loop().run_in_executor(None, input)
+    try:
+      resposta = input()
+    except (EOFError, KeyboardInterrupt):
+      resposta = 'exit'
     if resposta == 'exit':
-      raise GracefulExit
+      shared.shutdown_server()
+      continue
     if resposta.isnumeric() and int(resposta) < len(opcoes):
       opcoes[int(resposta)][1]()
     else:

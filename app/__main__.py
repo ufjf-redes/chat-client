@@ -1,7 +1,7 @@
-import asyncio
 import shared
+from threading import Thread
 from validacao import validar_nome_cliente
-from websockets.server import WebSocketServerProtocol, WebSocketServer, serve
+from websockets.sync.server import serve, WebSocketServer
 import socket as EnumSocketFamily
 from server_handler import me_registrar
 from graceful_exit import GracefulExit
@@ -14,47 +14,47 @@ from cliente import Cliente
 
 get_client_host = lambda: 'localhost'
 def criar_nome_cliente():
-    if len(argv) <= 1 or not validar_nome_cliente(argv[1]):
-        identifier = ''.join(choices(ascii_lowercase, k=4))
-        print(f"Nome não inserido ou inválido, seu nome será {identifier}")
-        return identifier
-    else:
-        return argv[1]
+  if len(argv) <= 1 or not validar_nome_cliente(argv[1]):
+    identifier = ''.join(choices(ascii_lowercase, k=4))
+    print(f"Nome não inserido ou inválido, seu nome será {identifier}")
+    return identifier
+  else:
+    return argv[1]
 
 def criar_url(server: WebSocketServer):
-    sock = server.sockets[0]
-    if sock.family == EnumSocketFamily.AF_INET:
-        return "%s:%d" % sock.getsockname()
-    elif sock.family == EnumSocketFamily.AF_INET6:
-        return "[%s]:%d" % sock.getsockname()[:2]
-    elif sock.family == EnumSocketFamily.AF_UNIX:
-        return sock.getsockname()
+    if server.socket.family == EnumSocketFamily.AF_INET:
+        return "%s:%d" % server.socket.getsockname()
+    elif server.socket.family == EnumSocketFamily.AF_INET6:
+        return "[%s]:%d" % server.socket.getsockname()[:2]
+    elif server.socket.family == EnumSocketFamily.AF_UNIX:
+        return server.socket.getsockname()
     else:
-        return str(sock.getsockname())
+        return str(server.socket.getsockname())
 
 def criar_cliente(server: WebSocketServer):
     shared.me = Cliente(criar_nome_cliente(), criar_url(server))
     print(f"Seja bem vindo, {shared.me.nome}!")
 
-async def start_ws_server():
-    server = await serve(websocket_handler, get_client_host(), 0)
+def start_ws_server():
+    server: WebSocketServer = serve(websocket_handler, get_client_host(), 0)
     criar_cliente(server)
     me_registrar()
     inicializar_socket_headers()
     
     print(f"WebSocket server running at {shared.me.endereco}")
-    menu_task = asyncio.create_task(exibir_menu())
     
+    Thread(target = exibir_menu, daemon=True).start()
+    shared.shutdown_server = server.shutdown
     try:
-        await asyncio.Future()
+      server.serve_forever()
     except GracefulExit:
-        print("Received exit signal, shutting down...")
+      print("Received exit signal, shutting down...")
     finally:
-        menu_task.cancel()
-        server.close()
-        await server.wait_closed()
-        print("WebSocket server stopped")
-
+      for chat in shared.chat_threads.values():
+        chat.stop()
+      server.shutdown()
+      print("WebSocket server stopped")
+        
 if __name__ == "__main__":
-    asyncio.run(start_ws_server())
+    start_ws_server()
     

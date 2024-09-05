@@ -10,6 +10,9 @@ class Interface(threading.Thread):
   font = ("Courier New", "12")
   root: tk.Tk = None
   st: ScrolledText = None
+  input_entry: tk.Entry = None
+  onClose = None
+  onInput = None
   
   def __init__(self, title="Terminal"):
       self.title=title
@@ -19,22 +22,35 @@ class Interface(threading.Thread):
       self.start()
       sleep(0.5)  # wait for window to open
 
-  def close(self):
+  def closeWindow(self):
     self.root.destroy()
-    self.root.update()
+    if self.onClose is not None:
+      self.onClose()
+    self.close()
+      
+  def close(self): 
+    if self.root is not None:
+      self.root.quit()
     self.root = None
-    self.st = None
-
+      
   def is_open(self):
     return self.root is not None
 
+  def process_input(self, event):
+    if self.onInput is not None:
+      self.onInput(self.input_entry.get())
+    self.input_entry.delete(0, tk.END)
+
   def run(self):
-      self.root = tk.Tk()
-      self.root.protocol("WM_DELETE_WINDOW", self.close)
-      self.root.title(self.title)
-      self.st = ScrolledText(self.root, height=self.height, width=self.width, font=self.font)
-      self.st.pack()
-      self.root.mainloop()
+    self.root = tk.Tk()
+    self.root.protocol("WM_DELETE_WINDOW", self.closeWindow)
+    self.root.title(self.title)
+    self.st = ScrolledText(self.root, height=self.height, width=self.width, font=self.font)
+    self.st.pack()
+    self.input_entry = tk.Entry(self.root, font=self.font)
+    self.input_entry.pack(fill=tk.X)
+    self.input_entry.bind("<Return>", self.process_input)
+    self.root.mainloop()
 
   def print(self, toPrint):
       if self.root is None or self.st is None:
