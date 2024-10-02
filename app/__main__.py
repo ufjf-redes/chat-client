@@ -11,6 +11,7 @@ from random import choices, choice
 from string import ascii_lowercase, digits
 from conexao_socket import websocket_handler, inicializar_socket_headers
 from cliente import Cliente
+from criptografia import generate_key
 
 get_client_host = lambda: 'localhost'
 def criar_nome_cliente():
@@ -40,6 +41,7 @@ def start_ws_server():
     criar_cliente(server)
     me_registrar()
     inicializar_socket_headers()
+    generate_key()
     
     print(f"WebSocket server running at {shared.me.endereco}")
     
