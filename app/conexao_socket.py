@@ -4,8 +4,8 @@ from websockets.sync import server as websockets
 from websockets.sync import client as websockets_client
 from enum import Enum
 from validacao import validar_nome_cliente
-from cliente import Cliente
-from chat_thread import Chat_Thread
+from Cliente import Cliente
+from Chat_Thread import Chat_Thread
 from my_enum import MensagemSocket, StatusChat
 from threading import Thread, current_thread
 from time import sleep

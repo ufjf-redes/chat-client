@@ -5,8 +5,8 @@ from typing import Tuple
 from validacao import validar_nome_cliente
 from conexao_socket import solicitar_conexao_a_endereco
 from util import input_nome_cliente
-from cliente import Cliente
-from chat_thread import Chat_Thread
+from Cliente import Cliente
+from Chat_Thread import Chat_Thread
 from my_enum import StatusChat
 from threading import Thread
 

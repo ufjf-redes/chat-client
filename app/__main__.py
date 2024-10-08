@@ -10,7 +10,7 @@ from sys import argv
 from random import choices, choice
 from string import ascii_lowercase, digits
 from conexao_socket import websocket_handler, inicializar_socket_headers
-from cliente import Cliente
+from Cliente import Cliente
 from criptografia import generate_key
 
 get_client_host = lambda: 'localhost'

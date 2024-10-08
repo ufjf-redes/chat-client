@@ -1,5 +1,5 @@
-from cliente import Cliente
-from chat_thread import Chat_Thread
+from Cliente import Cliente
+from Chat_Thread import Chat_Thread
 from threading import Event
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKeyWithSerialization
 

@@ -1,5 +1,5 @@
 from enum import Enum
-from cliente import Cliente
+from Cliente import Cliente
 from threading import Thread, Event
 from interface import Interface
 from websockets.sync.server import ServerConnection
